@@ -1,9 +1,12 @@
+import hexdump
 import numpy as np
+import opcode_table
+
 
 MOS_6510_RAM_SIZE = 0xFFFF
 
 
-class StatusRegister:
+class StatusRegister(object):
     """MOS P Register, individual flags as booleans"""
 
     def __init__(self):
@@ -18,6 +21,7 @@ class StatusRegister:
         self.unused2 = 1  # No effect, used by the stack copy
         self.overflow = 0  # Overflow: 1 if last ADC or SBC resulted in signed overflow
         self.negative = 0  # Negative: Set to bit 7 of the last operation
+
 
     @property
     def flags(self):
@@ -47,6 +51,7 @@ class Cpu:
     def __init__(self):
         self.model = (6, 5, 1, 0)
         self.ram = np.zeros(MOS_6510_RAM_SIZE, dtype=np.int8)
+        self.op_table = opcode_table.opcodes()
 
         self.PC = np.uint16()  # Program Counter is a 16 bit register
         self.S = np.uint8()  # Stack Pointer
@@ -56,11 +61,29 @@ class Cpu:
         self.Y = np.uint8()  # Index Register Y
 
 
+    def nop(self):
+        pass
+
+
+    def step(self,instruction):
+        try:
+            methodToCall = getattr(self, instruction)
+            result = methodToCall()
+        except AttributeError as e:
+                raise Exception("Instruction not implemented: {0}".format(instruction))
+
+
 def main():
     proc = Cpu()
     print("CPU Model: {0}".format(proc.model))
     print("CPU RAM Size: {0} ({0:X})".format(proc.ram.size))
     print(proc.P)
+    proc.step(proc.op_table.lookup_hex_code(0xEA))
+    # print("RAM Contents.........................")
+    # hexdump.hexdump(proc.ram)
+
+
+
 
 
 if __name__ == "__main__":
