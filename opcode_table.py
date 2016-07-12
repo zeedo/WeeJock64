@@ -13,13 +13,13 @@ class opcodes(object):
             csv_data = csv.reader(csvfile, delimiter=';', )
             for rows in csv_data:
                 self.op_table[int(rows[0], 16)] = self.opcode_to_named_tuple(
-                    rows[1:])  # first row is two characters in hex format, parse the rest as strings
+                    rows[1:])  # first field in row is two characters in hex format, parse the rest as strings
 
     def lookup_hex_code(self, hex_code):
         try:
             return self.op_table[hex_code].mnemonic
-        except KeyError as e:
-            raise Exception("Instruction not found: 0x{0:002X}".format(hex_code))
+        except KeyError:
+            raise KeyError("Instruction not found: 0x{0:002X}".format(hex_code))
 
     @staticmethod
     def opcode_to_named_tuple(opcode):

@@ -63,11 +63,11 @@ class Cpu:
 
     def step(self):
         try:
-            mnemonic = self.op_table.lookup_hex_code(0xEA) # TODO Implment memory lookup of instructions
+            mnemonic = self.op_table.lookup_hex_code(0xEA)  # TODO Implment memory lookup of instructions
             methodToCall = getattr(self, mnemonic)
             result = methodToCall()
-        except AttributeError as e:
-            raise Exception("Instruction not implemented: {0}".format(mnemonic))
+        except AttributeError:
+            raise AttributeError("Instruction not implemented: {0}".format(mnemonic))
 
 
 def main():
