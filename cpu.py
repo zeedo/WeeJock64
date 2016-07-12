@@ -17,8 +17,8 @@ class StatusRegister(object):
         self.zero = 0  # Zero: 1 if last operation resulted in a 0 value
         self.interrupt = 1  # Interrupt: Interrupt inhibit - interrupts are disabled if this is true!
         self.decimal = 0  # Decimal: 1 to make ADC and SBC use binary-coded decimal arithmetic
-        self.unused1 = 0  # No effect, used by the stack copy
-        self.unused2 = 1  # No effect, used by the stack copy
+        self.breakflag = 0  # Clear if interrupt vectoring, set if BRK or PHP
+        self.unused = 1  # Always set
         self.overflow = 0  # Overflow: 1 if last ADC or SBC resulted in signed overflow
         self.negative = 0  # Negative: Set to bit 7 of the last operation
 
@@ -30,15 +30,15 @@ class StatusRegister(object):
                             self.zero,
                             self.interrupt,
                             self.decimal,
-                            self.unused1,
-                            self.unused2,
+                            self.breakflag,
+                            self.unused,
                             self.overflow,
                             self.negative])[0]  # packbits returns an array but we only want the single element
 
     @flags.setter
     def flags(self, P):
         """Unpacks status flags from an int """
-        self.carry, self.zero, self.interrupt, self.decimal, self.unused1, self.unused2, self.overflow, self.negative = np.unpackbits(
+        self.carry, self.zero, self.interrupt, self.decimal, self.breakflag, self.unused, self.overflow, self.negative = np.unpackbits(
             np.asarray(P, dtype="uint8"))
 
     def __str__(self):
