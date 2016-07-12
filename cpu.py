@@ -2,7 +2,6 @@ import hexdump
 import numpy as np
 import opcode_table
 
-
 MOS_6510_RAM_SIZE = 0xFFFF
 
 
@@ -21,7 +20,6 @@ class StatusRegister(object):
         self.unused = 1  # Always set
         self.overflow = 0  # Overflow: 1 if last ADC or SBC resulted in signed overflow
         self.negative = 0  # Negative: Set to bit 7 of the last operation
-
 
     @property
     def flags(self):
@@ -60,17 +58,16 @@ class Cpu:
         self.X = np.uint8()  # Index Register X
         self.Y = np.uint8()  # Index Register Y
 
-
     def nop(self):
         pass
 
-
-    def step(self,instruction):
+    def step(self):
         try:
-            methodToCall = getattr(self, instruction)
+            mnemonic = self.op_table.lookup_hex_code(0xEA) # TODO Implment memory lookup of instructions
+            methodToCall = getattr(self, mnemonic)
             result = methodToCall()
         except AttributeError as e:
-                raise Exception("Instruction not implemented: {0}".format(instruction))
+            raise Exception("Instruction not implemented: {0}".format(mnemonic))
 
 
 def main():
@@ -78,12 +75,9 @@ def main():
     print("CPU Model: {0}".format(proc.model))
     print("CPU RAM Size: {0} ({0:X})".format(proc.ram.size))
     print(proc.P)
-    proc.step(proc.op_table.lookup_hex_code(0xEA))
+    proc.step()
     # print("RAM Contents.........................")
     # hexdump.hexdump(proc.ram)
-
-
-
 
 
 if __name__ == "__main__":
