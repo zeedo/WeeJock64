@@ -1,8 +1,14 @@
+import datetime
+import timeit
+
 import hexdump
 import numpy as np
+import struct
+import sys
 import opcode_table
 
-MOS_6510_RAM_SIZE = 0xFFFF
+MOS_65XX_RAM_START = 0xC000
+MOS_65XX_RAM_SIZE = 0xFFFF
 
 
 class StatusRegister(object):
@@ -47,35 +53,68 @@ class Cpu:
     """ Implements MOS 65XX series of CPUs, currently supports only 6510"""
 
     def __init__(self):
+        self.rom_file = None
         self.model = (6, 5, 1, 0)
-        self.ram = np.zeros(MOS_6510_RAM_SIZE, dtype=np.uint8)
+        self.ram = np.zeros(MOS_65XX_RAM_SIZE, dtype=np.uint8)
         self.op_table = opcode_table.opcodes()
 
-        self.PC = np.uint16()  # Program Counter is a 16 bit register
-        self.PC = 0xC000  # TODO: set this based on the input, e.g.. C64 files have start address as first 2 bytes
+        self.PC = np.dtype('<i2')  # Program Counter is a 16 bit register
+        self.PC = MOS_65XX_RAM_START  # TODO: set this based on the input, e.g.. C64 files have start address as first 2 bytes
         self.S = np.uint8()  # Stack Pointer
         self.P = StatusRegister()  # CPU status flags
         self.A = np.uint8()  # Accumulator
         self.X = np.uint8()  # Index Register X
         self.Y = np.uint8()  # Index Register Y
 
-    def nop(self):
+    def nop(self,opcode):
         pass
 
-    def step(self):
-        try:
-            print(hex(self.PC))
-            mnemonic = self.op_table.lookup_hex_code(self.ram[self.PC])
+    def lda(self,opcode):
+        if opcode.mode == 'imm':
+            self.A = self.ram[self.PC]
             self.PC += 1
-            methodToCall = getattr(self, mnemonic)
-            result = methodToCall()
-        except AttributeError:
-            raise AttributeError("Instruction not implemented: {0}".format(mnemonic))
+
+    def jsr(self, opcode):
+        # TODO implement stack push so we can return!
+        # TODO: Move this to a get_two_byte_address_from ram type function?
+        address = self.ram[self.PC:self.PC+2].tostring()
+        address = int.from_bytes(address, byteorder='little')
+        ###################################################################
+
+        if address == 0xFFD2: # Fake the CHROUT Routine http://sta.c64.org/cbm64krnfunc.html
+            sys.stdout.write(chr(self.A)),
+            self.PC += 2
+        else:
+            self.PC = address
+            print("Address:{0:00X}".format(self.PC))
+
+
+
+    def step(self):
+
+        # print(hex(self.PC))
+        executing_opcode = self.op_table.lookup_hex_code(self.ram[self.PC])
+        mnemonic = executing_opcode.mnemonic
+        self.PC += 1
+        methodToCall = getattr(self, mnemonic)
+        result = methodToCall(executing_opcode)
+
 
     def load_prg(self):
-        self.ram[0xC000] = 0xEA
-        self.ram[0xC001] = 0xAE
-        self.PC = 0xC000
+        rom_file_name = "./ROMS/hello_world"
+        with open(rom_file_name, "rb") as f:
+            # Little endian read of the first two bytes
+            # This gives the PC start address
+            self.PC = struct.unpack('<H', f.read(2))[0]
+            # Load the rest of the data into the rom_file and copy this to address space
+            # TODO: Maybe optomise this a bit, and get rid of the copy
+            self.rom_file = np.fromfile(f, dtype=np.uint8)
+            np.copyto(self.ram[MOS_65XX_RAM_START:(MOS_65XX_RAM_START + self.rom_file.size)], self.rom_file, casting='equiv')
+
+
+        # self.ram[MOS_65XX_RAM_START] = 0xEA
+        # self.ram[0xC001] = 0xAE
+        # self.PC = MOS_65XX_RAM_START
 
 
 def main():
@@ -84,11 +123,15 @@ def main():
     print("CPU RAM Size: {0} ({0:X})".format(proc.ram.size))
     print(proc.P)
     # print(hex(proc.PC))
-    # hexdump.hexdump(proc.ram[0xC000:0xC020])
+    hexdump.hexdump(proc.ram[MOS_65XX_RAM_START:0xC020])
+    print("Loading PRG")
     proc.load_prg()
-    # hexdump.hexdump(proc.ram[0xC000:0xC020])
-    proc.step()
-    proc.step()
+    print("Bytes Loaded:....")
+    hexdump.hexdump(proc.ram[MOS_65XX_RAM_START:MOS_65XX_RAM_START + proc.rom_file.size])
+    # hexdump.hexdump(proc.ram[MOS_65XX_RAM_START:0xC020])
+    while(1):
+        proc.step()
+
     # print("RAM Contents.........................")
     # hexdump.hexdump(proc.ram)
 

@@ -17,7 +17,7 @@ class opcodes(object):
 
     def lookup_hex_code(self, hex_code):
         try:
-            return self.op_table[hex_code].mnemonic
+            return self.op_table[hex_code]
         except KeyError:
             raise KeyError("Instruction not found: 0x{0:002X}".format(hex_code))
 
