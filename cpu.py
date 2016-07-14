@@ -48,10 +48,11 @@ class Cpu:
 
     def __init__(self):
         self.model = (6, 5, 1, 0)
-        self.ram = np.zeros(MOS_6510_RAM_SIZE, dtype=np.int8)
+        self.ram = np.zeros(MOS_6510_RAM_SIZE, dtype=np.uint8)
         self.op_table = opcode_table.opcodes()
 
         self.PC = np.uint16()  # Program Counter is a 16 bit register
+        self.PC = 0xC000  # TODO: set this based on the input, e.g.. C64 files have start address as first 2 bytes
         self.S = np.uint8()  # Stack Pointer
         self.P = StatusRegister()  # CPU status flags
         self.A = np.uint8()  # Accumulator
@@ -63,11 +64,18 @@ class Cpu:
 
     def step(self):
         try:
-            mnemonic = self.op_table.lookup_hex_code(0xEA)  # TODO Implment memory lookup of instructions
+            print(hex(self.PC))
+            mnemonic = self.op_table.lookup_hex_code(self.ram[self.PC])
+            self.PC += 1
             methodToCall = getattr(self, mnemonic)
             result = methodToCall()
         except AttributeError:
             raise AttributeError("Instruction not implemented: {0}".format(mnemonic))
+
+    def load_prg(self):
+        self.ram[0xC000] = 0xEA
+        self.ram[0xC001] = 0xAE
+        self.PC = 0xC000
 
 
 def main():
@@ -75,6 +83,11 @@ def main():
     print("CPU Model: {0}".format(proc.model))
     print("CPU RAM Size: {0} ({0:X})".format(proc.ram.size))
     print(proc.P)
+    # print(hex(proc.PC))
+    # hexdump.hexdump(proc.ram[0xC000:0xC020])
+    proc.load_prg()
+    # hexdump.hexdump(proc.ram[0xC000:0xC020])
+    proc.step()
     proc.step()
     # print("RAM Contents.........................")
     # hexdump.hexdump(proc.ram)
