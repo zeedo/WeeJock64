@@ -20,14 +20,15 @@ class StatusRegister(object):
     @property
     def flags(self):
         """Packs all the status flags into a uint8 """
-        return np.packbits([self.carry,
-                            self.zero,
-                            self.interrupt,
-                            self.decimal,
-                            self.breakflag,
-                            self.unused,
+        return np.packbits([self.negative,
                             self.overflow,
-                            self.negative])[0]  # packbits returns an array but we only want the single element
+                            self.unused,
+                            self.breakflag,
+                            self.decimal,
+                            self.interrupt,
+                            self.zero,
+                            self.carry
+                            ])[0]  # packbits returns an array but we only want the single element
 
     @flags.setter
     def flags(self, P):
@@ -36,4 +37,4 @@ class StatusRegister(object):
             np.asarray(P, dtype="uint8"))
 
     def __str__(self):
-        return "Flags:\tCZIDBuON\n\t\t{:08b}".format(self.flags)
+        return "Flags:\tNOuBDIZC\n\t\t{:08b}".format(self.flags)

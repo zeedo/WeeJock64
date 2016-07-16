@@ -32,13 +32,19 @@ class Cpu(Instructions):
         self.Y = np.uint8()  # Index Register Y
 
     def step(self):
+        self.fetch()
+        self.execute()
 
-        # FETCH
+
+    def fetch(self):
+
         self.executing_opcode = self.op_table.lookup_hex_code(self.ram[self.PC])
-        self.address_pointer = self.address_by_mode()
-        self.PC += 1
 
-        # EXECUTE
+
+
+    def execute(self):
+        self.address_pointer = self.address_by_mode()
+
         methodToCall = getattr(self, self.executing_opcode.mnemonic)
         result = methodToCall()
 
@@ -55,19 +61,28 @@ class Cpu(Instructions):
 
     def address_by_mode(self):
 
-        if 'abs' in self.executing_opcode.mode:
+        if 'abs' == self.executing_opcode.mode:
             high_byte = self.ram[self.PC + 2]
             low_byte = self.ram[self.PC + 1]
             # print("high: {0:002X}, low: {1:002X}".format(high_byte,low_byte))
             high_byte <<= 8
             address = high_byte ^ low_byte
-            self.PC += 2
+            self.PC += 3
 
-        elif 'imm' in self.executing_opcode.mode:
+        elif 'imm' == self.executing_opcode.mode:
             address = self.PC + 1
-            self.PC = address
-        else:
+            self.PC += 2
+        elif 'zp' == self.executing_opcode.mode:
+            address = self.ram[self.PC + 1]
+            self.PC += 2
+        elif 'imp' == self.executing_opcode.mode:
             address = None
+            self.PC += 1
+        elif 'rel' == self.executing_opcode.mode:
+            address = self.PC + 2 + np.int8(self.ram[self.PC + 1])
+            self.PC += 2
+        else:
+            raise Exception("Address Mode Not Implemented {0}".format(self.executing_opcode.mode))
 
         return address
 
