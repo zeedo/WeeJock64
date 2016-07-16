@@ -1,11 +1,9 @@
-import hexdump
+import re
+from typing import List
+
+import numpy as np
 
 from cpu import Cpu
-import numpy as np
-from typing import List
-import re
-
-from statusregister import StatusRegister
 
 MOS_65XX_RAM_START = 0xC000
 MOS_65XX_RAM_SIZE = 0xFFFF

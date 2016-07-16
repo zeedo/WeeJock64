@@ -1,5 +1,6 @@
-import numpy as np
 import sys
+
+import numpy as np
 
 
 class Instructions(object):
@@ -22,6 +23,23 @@ class Instructions(object):
         if not self.P.zero:
             self.PC = self.address_pointer
 
+    def bpl(self):
+        if not self.P.negative:
+            self.PC = self.address_pointer
+
+    def bmi(self):
+        if self.P.negative:
+            self.PC = self.address_pointer
+
+    def bvc(self):
+        if not self.P.overflow:
+            self.PC = self.address_pointer
+
+    def bvs(self):
+        if self.P.overflow:
+            self.PC = self.address_pointer
+
+
     def brk(self):
         # TODO: Implement proper BRK handler
         print("\n[!] BREAK at " + hex(self.PC))
@@ -39,12 +57,14 @@ class Instructions(object):
     def ld_reg(self):
         reg = self.ram[self.address_pointer]
         self.P.zero = (reg == 0)
-        if reg >= 0b10000000:
-            self.P.negative = True
-        else:
-            self.P.negative = False
-
+        self.P.negative = ((reg & 0b10000000) >> 7)
         return reg
+
+    def bit(self):
+        self.P.zero = (self.ram[self.address_pointer] & self.A == 0)
+        self.P.negative = ((self.ram[self.address_pointer] & 0b10000000) >> 7)
+        self.P.overflow = ((self.ram[self.address_pointer] & 0b01000000) >> 6)
+
 
     def sec(self):
         self.P.carry = 1
