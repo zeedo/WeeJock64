@@ -62,9 +62,9 @@ class NesTestLine:
         x_match = self.expected_x == proc.X
         y_match = self.expected_y == proc.Y
         p_match = self.expected_p == proc.P.flags
-        # sp_match = self.expected_sp == cpu.sp_reg
-        # valid = pc_match and instruction_match and a_match and x_match and y_match and p_match and sp_match and data_bytes_match
-        valid = pc_match and instruction_match and a_match and x_match and y_match and p_match
+        sp_match = self.expected_sp == proc.SP
+        valid = pc_match and instruction_match and a_match and x_match and y_match and p_match and sp_match
+        # valid = pc_match and instruction_match and a_match and x_match and y_match and p_match
 
         if not valid:
             raise Exception('Instruction results not expected\n{}'.format(proc.executing_opcode))
@@ -101,18 +101,18 @@ def main():
     print(proc.P)
     # print(hex(proc.PC))
 
-    print("\nLoading PRG.....\t", end=' ')
+
     load_nes_test(proc)
-    print("Program Counter: " + hex(proc.PC), end='\t')
-    print("Bytes Loaded:")
+    # Initialise stack register
+    proc.SP = 0xFD
+
     # hexdump.hexdump(proc.ram[0:0xFFFF])
     # hexdump.hexdump(proc.ram[MOS_65XX_RAM_START:0xC020])
     while 1:
         # print("A:{0:002x} X:{1:002x} Y:{2:002x} P:{3:002x} SP:N/A".format(proc.A, proc.X, proc.Y, proc.P.flags))
         proc.fetch()
-        print("{0:X}\t{1}\tA:{2:002x} X:{3:002x} Y:{4:02x} P:{5:002x} SP:NA".format(proc.PC, proc.executing_opcode.mnemonic, proc.A, proc.X, proc.Y,
-                                                                               proc.P.flags))
-        print(proc.P)
+        # print("{0:X}\t{1}\tA:{2:002X} X:{3:002X} Y:{4:02X} P:{5:002X} SP:{6:002X} ".format(proc.PC, proc.executing_opcode.mnemonic, proc.A, proc.X, proc.Y, proc.P.flags, proc.SP))
+        # print(proc.P)
         nes_test_log.compare(proc)
         proc.execute()
 

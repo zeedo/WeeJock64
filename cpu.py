@@ -5,11 +5,11 @@ import numpy as np
 
 import opcode_table
 from instructions import Instructions
-
 from statusregister import StatusRegister
 
 MOS_65XX_RAM_START = 0xC000
 MOS_65XX_RAM_SIZE = 0xFFFF
+MOS_STACK_OFFSET = 0x100
 
 
 class Cpu(Instructions):
@@ -25,7 +25,7 @@ class Cpu(Instructions):
         self.PC = np.dtype('<i2')  # Program Counter is a 16 bit register
         self.PC = MOS_65XX_RAM_START  # TODO: set this based on the input, e.g.. C64 files have start address as first 2 bytes
         self.PC_fake_retaddr = np.dtype('<i2')  # Fake return address until we implement a stack
-        self.S = np.uint8()  # Stack Pointer
+        self.SP = np.uint8(0xFF)  # Stack Pointer
         self.P = StatusRegister()  # CPU status flags
         self.A = np.uint8()  # Accumulator
         self.X = np.uint8()  # Index Register X
@@ -35,17 +35,17 @@ class Cpu(Instructions):
         self.fetch()
         self.execute()
 
-
     def fetch(self):
 
         self.executing_opcode = self.op_table.lookup_hex_code(self.ram[self.PC])
 
-
-
     def execute(self):
         self.address_pointer = self.address_by_mode()
 
-        methodToCall = getattr(self, self.executing_opcode.mnemonic)
+        if self.executing_opcode.mnemonic == 'and':  # and is a reserved keyword
+            methodToCall = methodToCall = getattr(self, '_and')
+        else:
+            methodToCall = getattr(self, self.executing_opcode.mnemonic)
         result = methodToCall()
 
     def set_PC_bytes(self, high_byte, low_byte):
@@ -53,7 +53,15 @@ class Cpu(Instructions):
 
         self.PC = high_byte ^ low_byte
 
-    def get_PC_Bytes(self):
+    def push(self, byte):
+        self.ram[MOS_STACK_OFFSET + self.SP] = byte
+        self.SP -= 1  # Stack grows down
+
+    def pop(self):
+        self.SP += 1  # Stack grows down
+        return self.ram[MOS_STACK_OFFSET + self.SP]
+
+    def get_PC_bytes(self):
         high_byte = self.PC & 0xFF00
         high_byte >>= 8
         low_byte = self.PC & 0x00FF
