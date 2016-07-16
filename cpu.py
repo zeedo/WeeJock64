@@ -1,56 +1,18 @@
-import datetime
-import timeit
+import struct
 
 import hexdump
 import numpy as np
-import struct
-import sys
 
 import opcode_table
+from instructions import Instructions
+
+from statusregister import StatusRegister
 
 MOS_65XX_RAM_START = 0xC000
 MOS_65XX_RAM_SIZE = 0xFFFF
 
 
-class StatusRegister(object):
-    """MOS P Register, individual flags as booleans"""
-
-    def __init__(self):
-        # http://wiki.nesdev.com/w/index.php/CPU_status_flag_behavior
-
-        self.carry = 0  # Carry: 1 if last addition or shift resulted in a carry,
-        # or if last subtraction resulted in no borrow
-        self.zero = 0  # Zero: 1 if last operation resulted in a 0 value
-        self.interrupt = 1  # Interrupt: Interrupt inhibit - interrupts are disabled if this is true!
-        self.decimal = 0  # Decimal: 1 to make ADC and SBC use binary-coded decimal arithmetic
-        self.breakflag = 0  # Clear if interrupt vectoring, set if BRK or PHP
-        self.unused = 1  # Always set
-        self.overflow = 0  # Overflow: 1 if last ADC or SBC resulted in signed overflow
-        self.negative = 0  # Negative: Set to bit 7 of the last operation
-
-    @property
-    def flags(self):
-        """Packs all the status flags into a uint8 """
-        return np.packbits([self.carry,
-                            self.zero,
-                            self.interrupt,
-                            self.decimal,
-                            self.breakflag,
-                            self.unused,
-                            self.overflow,
-                            self.negative])[0]  # packbits returns an array but we only want the single element
-
-    @flags.setter
-    def flags(self, P):
-        """Unpacks status flags from an int """
-        self.carry, self.zero, self.interrupt, self.decimal, self.breakflag, self.unused, self.overflow, self.negative = np.unpackbits(
-            np.asarray(P, dtype="uint8"))
-
-    def __str__(self):
-        return "Flags:\tCZIDBuON\n\t\t{:08b}".format(self.flags)
-
-
-class Cpu:
+class Cpu(Instructions):
     """ Implements MOS 65XX series of CPUs, currently supports only 6510"""
 
     def __init__(self):
@@ -58,6 +20,7 @@ class Cpu:
         self.model = (6, 5, 1, 0)
         self.ram = np.zeros(MOS_65XX_RAM_SIZE, dtype=np.uint8)
         self.op_table = opcode_table.opcodes()
+        self.executing_opcode = None
 
         self.PC = np.dtype('<i2')  # Program Counter is a 16 bit register
         self.PC = MOS_65XX_RAM_START  # TODO: set this based on the input, e.g.. C64 files have start address as first 2 bytes
@@ -68,36 +31,16 @@ class Cpu:
         self.X = np.uint8()  # Index Register X
         self.Y = np.uint8()  # Index Register Y
 
-    def nop(self, opcode):
-        pass
-
-    def brk(self, opcode):
-        # TODO: Implement proper BRK handler
-        print("\n[!] BREAK at " + hex(self.PC))
-        exit(0)
-
-    def lda(self, opcode):
-        if opcode.mode == 'imm':
-            self.A = self.ram[self.PC]
-            self.PC += 1
-
-    def jsr(self, opcode):
-        # TODO: replace PC_fake_retaddr with a stack push
-        self.PC_fake_retaddr = np.copy(self.PC + 2)
-        self.set_PC_bytes(self.ram[self.PC + 1], self.ram[self.PC], )
-
-        if self.PC == 0xFFD2:  # Fake the CHROUT Routine http://sta.c64.org/cbm64krnfunc.html
-            sys.stdout.write(chr(self.A)),
-            self.PC = self.PC_fake_retaddr
-
     def step(self):
 
-        # print(hex(self.PC))
-        executing_opcode = self.op_table.lookup_hex_code(self.ram[self.PC])
-        mnemonic = executing_opcode.mnemonic
+        # FETCH
+        self.executing_opcode = self.op_table.lookup_hex_code(self.ram[self.PC])
+        self.address_pointer = self.address_by_mode()
         self.PC += 1
-        methodToCall = getattr(self, mnemonic)
-        result = methodToCall(executing_opcode)
+
+        # EXECUTE
+        methodToCall = getattr(self, self.executing_opcode.mnemonic)
+        result = methodToCall()
 
     def set_PC_bytes(self, high_byte, low_byte):
         high_byte <<= 8
@@ -110,16 +53,35 @@ class Cpu:
         low_byte = self.PC & 0x00FF
         return np.array([high_byte, low_byte], dtype=np.uint8)
 
+    def address_by_mode(self):
+
+        if 'abs' in self.executing_opcode.mode:
+            high_byte = self.ram[self.PC + 2]
+            low_byte = self.ram[self.PC + 1]
+            # print("high: {0:002X}, low: {1:002X}".format(high_byte,low_byte))
+            high_byte <<= 8
+            address = high_byte ^ low_byte
+            self.PC += 2
+
+        elif 'imm' in self.executing_opcode.mode:
+            address = self.PC + 1
+            self.PC = address
+        else:
+            address = None
+
+        return address
+
     def load_prg(self):
-        rom_file_name = "./ROMS/hello_world"
+        rom_file_name = "./ROMS/hello_world.prg"
         with open(rom_file_name, "rb") as f:
             # Little endian read of the first two bytes
             # This gives the PC start address
             self.PC = struct.unpack('<H', f.read(2))[0]
             # Load the rest of the data into the rom_file and copy this to address space
             # TODO: Maybe optomise this a bit, and get rid of the copy
+            # TODO: When moving this to a ROM loader file think about whether we load and execute separately
             self.rom_file = np.fromfile(f, dtype=np.uint8)
-            np.copyto(self.ram[MOS_65XX_RAM_START:(MOS_65XX_RAM_START + self.rom_file.size)], self.rom_file,
+            np.copyto(self.ram[self.PC:(self.PC + self.rom_file.size)], self.rom_file,
                       casting='equiv')
 
 
@@ -136,12 +98,14 @@ def main():
     # print(hex(proc.PC))
     print("\nLoading PRG.....\t", end=' ')
     proc.load_prg()
-    print("Program Counter: " + hex(proc.PC),end='\t')
+    print("Program Counter: " + hex(proc.PC), end='\t')
     print("Bytes Loaded:")
     hexdump.hexdump(proc.ram[MOS_65XX_RAM_START:MOS_65XX_RAM_START + proc.rom_file.size])
     # hexdump.hexdump(proc.ram[MOS_65XX_RAM_START:0xC020])
     while (1):
         proc.step()
+        # print("A:{0:002x} X:{0:002x} Y:{0:002x} P:{0:002x} SP:{0:002x}".format(proc.A,proc.X,proc.Y,proc.P))
+
 
         # print("RAM Contents.........................")
         # hexdump.hexdump(proc.ram)
