@@ -33,8 +33,11 @@ class StatusRegister(object):
     @flags.setter
     def flags(self, P):
         """Unpacks status flags from an int """
-        self.carry, self.zero, self.interrupt, self.decimal, self.breakflag, self.unused, self.overflow, self.negative = np.unpackbits(
+        self.negative, self.overflow, self.unused, self.breakflag, self.decimal, self.interrupt, self.zero, self.carry = np.unpackbits(
             np.asarray(P, dtype="uint8"))
+
+        # self.carry, self.zero, self.interrupt, self.decimal, self.breakflag, self.unused, self.overflow, self.negative = np.unpackbits(
+        #     np.asarray(P, dtype="uint8"))
 
     def __str__(self):
         return "Flags:\tNOuBDIZC\n\t\t{:08b}".format(self.flags)

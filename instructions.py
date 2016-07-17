@@ -154,7 +154,7 @@ class Instructions(object):
     def php(self):
         # PHP Sets bits 4 and 5 to 1
         # http://wiki.nesdev.com/w/index.php/CPU_status_flag_behavior
-        self.push(self.P.flags | 0b110000)
+        self.push(self.P.flags | 0b000110000)
 
     def plp(self):
         pulled_reg = StatusRegister()
@@ -162,8 +162,9 @@ class Instructions(object):
         self.P.negative = pulled_reg.negative
         self.P.overflow = pulled_reg.overflow
         # Ignores BRK bit and unused bit
+        # http://wiki.nesdev.com/w/index.php/CPU_status_flag_behavior
         self.P.decimal = pulled_reg.decimal
-        self.P.interrupt = 1  # Not an interrupt so this should be 1
+        self.P.interrupt = pulled_reg.interrupt
         self.P.zero = pulled_reg.zero
         self.P.carry = pulled_reg.carry
 

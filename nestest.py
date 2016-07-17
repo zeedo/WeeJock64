@@ -67,6 +67,7 @@ class NesTestLine:
         # valid = pc_match and instruction_match and a_match and x_match and y_match and p_match
 
         if not valid:
+            print(hex(proc.PC))
             raise Exception('Instruction results not expected\n{}'.format(proc.executing_opcode))
 
 def load_nes_test(proc):
