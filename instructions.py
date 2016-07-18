@@ -48,16 +48,18 @@ class Instructions(object):
         self.PC += 1
 
     def jsr(self):
+        # Prep for the RTS instruction which pulls us back to the current PC
         self.PC -= 1
         high_byte, low_byte = self.get_PC_bytes()
         self.push(high_byte)
         self.push(low_byte)
+
+        # Jump to the required subroutine
         self.PC = self.address_pointer
 
         if self.PC == 0xFFD2:  # Fake the CHROUT Routine http://sta.c64.org/cbm64krnfunc.html
             sys.stdout.write(chr(self.A)),
-            self.PC = self.PC_fake_retaddr
-            self.address_pointer = None
+            self.rts()  # Execute the return, pop's the PC back off the stack
 
     def jmp(self):
         self.PC = self.address_pointer

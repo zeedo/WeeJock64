@@ -24,7 +24,7 @@ class Cpu(Instructions):
 
         self.PC = np.dtype('<i2')  # Program Counter is a 16 bit register
         self.PC = MOS_65XX_RAM_START  # TODO: set this based on the input, e.g.. C64 files have start address as first 2 bytes
-        self.PC_fake_retaddr = np.dtype('<i2')  # Fake return address until we implement a stack
+        self.address_pointer = np.dtype('<i2')
         self.SP = np.uint8(0xFF)  # Stack Pointer
         self.P = StatusRegister()  # CPU status flags
         self.A = np.uint8()  # Accumulator
@@ -80,12 +80,14 @@ class Cpu(Instructions):
         elif 'imm' == self.executing_opcode.mode:
             address = self.PC + 1
             self.PC += 2
+
         elif 'zp' == self.executing_opcode.mode:
             address = self.ram[self.PC + 1]
             self.PC += 2
         elif 'imp' == self.executing_opcode.mode:
             address = None
             self.PC += 1
+
         elif 'rel' == self.executing_opcode.mode:
             address = self.PC + 2 + np.int8(self.ram[self.PC + 1])
             self.PC += 2
