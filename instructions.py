@@ -133,7 +133,7 @@ class Instructions(object):
 
     def brk(self):
         # TODO: Implement proper BRK handler
-        print("\n[!] BREAK at " + hex(self.PC))
+        print("\n[!] BREAK at {:002X}".format(self.PC))
         exit(0)
 
     # STACK INSTRUCTIONS

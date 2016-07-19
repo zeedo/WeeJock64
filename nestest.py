@@ -1,13 +1,10 @@
 import re
 from typing import List
 
-import numpy as np
-
-from cpu import Cpu
+from cpu import *
 
 MOS_65XX_RAM_START = 0xC000
 MOS_65XX_RAM_SIZE = 0xFFFF
-
 
 
 class NesTestLog:
@@ -31,6 +28,7 @@ class NesTestLine:
     PC Bytes Instruction A X Y P SP CYC
     C000  4C F5 C5  JMP $C5F5                       A:00 X:00 Y:00 P:24 SP:FD CYC:  0
     """
+
     def __init__(self, line: str, compiled_pattern):
         self.line = line
 
@@ -64,11 +62,10 @@ class NesTestLine:
         p_match = self.expected_p == proc.P.flags
         sp_match = self.expected_sp == proc.SP
         valid = pc_match and instruction_match and a_match and x_match and y_match and p_match and sp_match
-        # valid = pc_match and instruction_match and a_match and x_match and y_match and p_match
-
         if not valid:
             print(hex(proc.PC))
             raise Exception('Instruction results not expected\n{}'.format(proc.executing_opcode))
+
 
 def load_nes_test(proc):
     # For now, you can load 0x4000 bytes starting at offset 0x0010, and map that as
@@ -87,36 +84,60 @@ def load_nes_test(proc):
                   casting='equiv')
 
 
-        # self.ram[MOS_65XX_RAM_START] = 0xEA
-        # self.ram[0xC001] = 0xAE
-        # self.PC = MOS_65XX_RAM_START
-
-
 with open('./ROMS/nestest.log', 'r') as nes_test_file:
     nes_test_log = NesTestLog(nes_test_file.readlines())
+
 
 def main():
     proc = Cpu()
     print("CPU Model: {0}".format(proc.model))
     print("CPU RAM Size: {0} ({0:X})".format(proc.ram.size))
     print(proc.P)
-    # print(hex(proc.PC))
-
 
     load_nes_test(proc)
-    # Initialise stack register
-    proc.SP = 0xFD
 
-    # hexdump.hexdump(proc.ram[0:0xFFFF])
-    # hexdump.hexdump(proc.ram[MOS_65XX_RAM_START:0xC020])
+    # Initialise stack register
+    proc.SP = np.uint8(0xFD)
+
     while 1:
-        # print("A:{0:002x} X:{1:002x} Y:{2:002x} P:{3:002x} SP:N/A".format(proc.A, proc.X, proc.Y, proc.P.flags))
         proc.fetch()
-        # print("{0:X}\t{1}\tA:{2:002X} X:{3:002X} Y:{4:02X} P:{5:002X} SP:{6:002X} ".format(proc.PC, proc.executing_opcode.mnemonic, proc.A, proc.X, proc.Y, proc.P.flags, proc.SP))
-        # print(proc.P)
+
+        # *********************** Move to a disasm routine:
+        if 'abs' == proc.executing_opcode.mode:
+            high_byte = proc.ram[proc.PC + 2]
+            low_byte = proc.ram[proc.PC + 1]
+            high_byte <<= 8
+            address = high_byte ^ low_byte
+            opcode_size = 3
+
+        elif 'imm' == proc.executing_opcode.mode:
+            address = proc.PC + 1
+            opcode_size = 2
+
+        elif 'zp' == proc.executing_opcode.mode:
+            address = proc.ram[proc.PC + 1]
+            opcode_size = 2
+
+        elif 'imp' == proc.executing_opcode.mode:
+            address = None
+            opcode_size = 1
+
+        elif 'rel' == proc.executing_opcode.mode:
+            address = proc.PC + 2 + proc.ram[proc.PC + 1]
+            opcode_size = 2
+
+        else:
+            raise Exception("Address Mode Not Implemented {0}".format(proc.executing_opcode.mode))
+        print("{:004X}\t".format(proc.PC), end="")
+        print("{}".format(proc.executing_opcode.mnemonic.upper()), end="")
+        if address:
+            print(" {:004X}".format(address), end="")
+        else:
+            print("\t\t", end="")
+        print("\tA:{:002x} X:{:002X} Y:{:002X} P:{:008b} SP:{:002X}".format(
+            proc.A, proc.X, proc.Y, proc.P.flags, proc.SP))
         nes_test_log.compare(proc)
         proc.execute()
-
 
 
 if __name__ == "__main__":

@@ -110,30 +110,21 @@ class Cpu(Instructions):
                       casting='equiv')
 
 
-            # self.ram[MOS_65XX_RAM_START] = 0xEA
-            # self.ram[0xC001] = 0xAE
-            # self.PC = MOS_65XX_RAM_START
 
 
 def main():
     proc = Cpu()
     print("CPU Model: {0}".format(proc.model))
     print("CPU RAM Size: {0} ({0:X})".format(proc.ram.size))
-    print(proc.P)
-    # print(hex(proc.PC))
+
     print("\nLoading PRG.....\t", end=' ')
     proc.load_prg()
     print("Program Counter: " + hex(proc.PC), end='\t')
     print("Bytes Loaded:")
     hexdump.hexdump(proc.ram[MOS_65XX_RAM_START:MOS_65XX_RAM_START + proc.rom_file.size])
-    # hexdump.hexdump(proc.ram[MOS_65XX_RAM_START:0xC020])
+
     while (1):
         proc.step()
-        # print("A:{0:002x} X:{0:002x} Y:{0:002x} P:{0:002x} SP:{0:002x}".format(proc.A,proc.X,proc.Y,proc.P))
-
-
-        # print("RAM Contents.........................")
-        # hexdump.hexdump(proc.ram)
 
 
 if __name__ == "__main__":
