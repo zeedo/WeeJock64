@@ -135,9 +135,11 @@ def main():
 
     print("\nLoading PRG.....\t", end=' ')
     proc.load_prg()
-    print("Program Counter: " + hex(proc.PC), end='\t')
+    print("Program Counter: {:X}\n".format(proc.PC))
     print("Bytes Loaded:")
     hexdump.hexdump(proc.ram[MOS_65XX_RAM_START:MOS_65XX_RAM_START + proc.rom_file.size])
+
+    print("READY!\n\n")
 
     while (1):
         proc.step()
