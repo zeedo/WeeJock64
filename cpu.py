@@ -32,14 +32,18 @@ class Cpu(Instructions):
         self.Y = np.uint8()  # Index Register Y
 
     def step(self):
+        """ Perform a single CPU fetch execute cycle """
         self.fetch()
         self.execute()
 
     def fetch(self):
+        """ Fetch next instruction from memory, lookup opcode and prepare to execute """
 
         self.executing_opcode = self.op_table.lookup_hex_code(self.ram[self.PC])
 
     def execute(self):
+        """Execute fetched instructions by attempting to call a method in the CPU class using the opcode mnemonic
+         As an attribute name """
         self.address_pointer = self.address_by_mode()
 
         if self.executing_opcode.mnemonic == 'and':  # and is a reserved keyword
@@ -49,25 +53,33 @@ class Cpu(Instructions):
         result = methodToCall()
 
     def set_PC_bytes(self, high_byte, low_byte):
+        """ Set Program Counter provided two bytes, helper function when reading bytes in little endian format """
         high_byte <<= 8
 
         self.PC = high_byte ^ low_byte
 
     def push(self, byte):
+        """ Implementation of a stack push, place a byte at the current stack pointer and decrement the pointer
+        Stack starts at MOS_STACK_OFFSET and grows down"""
         self.ram[MOS_STACK_OFFSET + self.SP] = byte
         self.SP -= 1  # Stack grows down
 
     def pop(self):
+        """ Implementation of a stack pop, pop a byte at the current stack pointer and increment the pointer
+        Stack starts at MOS_STACK_OFFSET and grows down"""
         self.SP += 1  # Stack grows down
         return self.ram[MOS_STACK_OFFSET + self.SP]
 
     def get_PC_bytes(self):
+        """Get Program Counter bytes as a high and low byte, helper function when reading bytes in little endian format"""
         high_byte = self.PC & 0xFF00
         high_byte >>= 8
         low_byte = self.PC & 0x00FF
         return np.array([high_byte, low_byte], dtype=np.uint8)
 
     def address_by_mode(self):
+        """Determine the appropriate address location of an instructions operand
+        Returns the address required for instruction execution and increments the program counter appropriately"""
 
         if 'abs' == self.executing_opcode.mode:
             high_byte = self.ram[self.PC + 2]
@@ -97,6 +109,10 @@ class Cpu(Instructions):
         return address
 
     def load_prg(self):
+        """Placeholder function to load a PRG, will be replaced with command line file input
+        Reads the first two bytes from a binary file and converts to an address
+        Loads the rest of the file data at that address
+        Sets the PC to the loaded address"""
         rom_file_name = "./ROMS/hello_world.prg"
         with open(rom_file_name, "rb") as f:
             # Little endian read of the first two bytes

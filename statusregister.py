@@ -2,7 +2,8 @@ import numpy as np
 
 
 class StatusRegister(object):
-    """MOS P Register, individual flags as booleans"""
+    """MOS P Register, individual flags as booleans and int
+    TODO: refactor the flags property to simplify integer access """
 
     def __init__(self):
         # http://wiki.nesdev.com/w/index.php/CPU_status_flag_behavior

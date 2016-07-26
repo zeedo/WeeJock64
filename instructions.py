@@ -4,6 +4,8 @@ from statusregister import StatusRegister
 
 
 class Instructions(object):
+    """ Implements individual 65XX instructions, is an abstract class which relies on being instantiated
+    as part of the CPU class to implement address pointers and stack registers"""
     def nop(self):
         pass
 

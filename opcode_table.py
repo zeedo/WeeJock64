@@ -3,6 +3,9 @@ from collections import namedtuple
 
 
 class opcodes(object):
+    """ Reads opcodes from a CSV file and populates a lookup table to allow the CPU to dynamically
+    lookup opcodes and their addressing types
+    When executed as a __main__ will output the opcode table """
     def __init__(self, opcode_file='./data/6502-opcodes.csv'):
         self.op_table = {}
         self.csv_load_opcode_table(opcode_file)
