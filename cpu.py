@@ -9,7 +9,7 @@ from statusregister import StatusRegister
 
 MOS_65XX_RAM_START = 0xC000
 MOS_65XX_RAM_SIZE = 0xFFFF
-MOS_STACK_OFFSET = 0x100
+MOS_STACK_OFFSET = 0x100  # Stack grows down from here
 
 
 class Cpu(Instructions):
@@ -47,7 +47,7 @@ class Cpu(Instructions):
         self.address_pointer = self.address_by_mode()
 
         if self.executing_opcode.mnemonic == 'and':  # and is a reserved keyword
-            methodToCall = methodToCall = getattr(self, '_and')
+            methodToCall = getattr(self, '_and')
         else:
             methodToCall = getattr(self, self.executing_opcode.mnemonic)
         result = methodToCall()
