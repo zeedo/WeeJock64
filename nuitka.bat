@@ -1,1 +1,0 @@
-C:\Users\barrie\AppData\Local\Programs\Python\Python35-32\Scripts\nuitka.bat --recurse-all --standalone cpu.py
